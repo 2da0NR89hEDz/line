@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Drawing;
@@ -54,7 +54,7 @@ namespace ConsoleApp1
             {
                 for (int x = 0; x < bmp.Width; x++)
                 {
-                    mat.Add(new xyv(x, y, bmp.GetPixel(x,y).G));
+                    mat.Add(new xyv(x, y, bmp.GetPixel(x,y).B));
                 }
             }
 
@@ -68,7 +68,30 @@ namespace ConsoleApp1
                 }
             }
             double aveLineWidth = eachLineWidth.Average();
-            
+
+            // get y
+
+            var maxEachX = new List<xyv>();
+            for (int x = 0; x < bmp.Width; x++)
+            {
+                var colmun = mat.Where(p => p.X == x).ToList();
+                var v_max = colmun.Max(p => p.V);
+                var y_max = colmun.FindIndex(p => p.V == v_max);
+                if (y_max > 100 && y_max < 900)
+                {
+                    maxEachX.Add(new xyv(x, y_max, v_max));
+                }
+            }
+
+            var sum = 0;
+            var sumproduct = 0;
+            foreach (var p in maxEachX)
+            {
+                sum += p.V;
+                sumproduct += p.V * p.Y;
+            }
+            var y_peak = (double)sumproduct / sum;
+
         }
 
         static byte[] BitmapToByteArray(Bitmap src)
