@@ -1,0 +1,87 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using OpenCvSharp;
+
+namespace ConsoleApp2
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            // include opencvsharp3
+
+            Mat mat = Cv2.ImRead("test.bmp", ImreadModes.Grayscale);
+
+            // x
+
+            Mat maxInRows = new Mat();
+            Cv2.Reduce(mat, maxInRows, ReduceDimension.Row, ReduceTypes.Max, -1);
+            Mat binaryForRow = maxInRows.Threshold(50, 255, ThresholdTypes.Binary);
+            
+            byte[] array = new byte[binaryForRow.Total()];
+            binaryForRow.GetArray(0, 0, array);
+
+            // x both side
+
+            int x_min = 0;
+            int x_max = 0;
+            for (int x = 0; x < array.Length; x++)
+            {
+                if(array[x] != 0) { x_min = x; break; }
+            }
+            for (int x = array.Length - 1; x > 0; x--)
+            {
+                if (array[x] != 0) { x_max = x; break; }
+            }
+
+            // x centroid
+
+            double sumproduct = 0;
+            double sum = 0;
+            for (int x = 0; x < array.Length; x++)
+            {
+                sumproduct += x * array[x];
+                sum += array[x];
+            }
+            double centroidX = sumproduct / sum;
+
+            // y
+
+            Mat maxInColumns = new Mat();
+            Cv2.Reduce(mat, maxInColumns, ReduceDimension.Column, ReduceTypes.Max, -1);
+            Mat binaryForCol = maxInColumns.Threshold(50, 255, ThresholdTypes.Binary);
+
+            // y width
+
+            int yWidth = Cv2.CountNonZero(binaryForCol);
+
+            // y centroid
+
+            array = new byte[binaryForCol.Total()];
+            binaryForCol.GetArray(0, 0, array);
+
+            sumproduct = 0;
+            sum = 0;
+            for (int y = 0; y < array.Length; y++)
+            {
+                sumproduct += y * array[y];
+                sum += array[y];
+            }
+            double centroidY = sumproduct / sum;
+
+            // hole width
+
+            Mat binary = mat.Threshold(50, 255, ThresholdTypes.Binary);
+            int pixelCount = Cv2.CountNonZero(binary);
+
+            Mat binaryColumns = maxInColumns.Threshold(50, 255, ThresholdTypes.Binary);
+            int columnCount = Cv2.CountNonZero(binaryColumns);
+
+            double lineWidth = (double)pixelCount / columnCount;
+
+        }
+    }
+}
