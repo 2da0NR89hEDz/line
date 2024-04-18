@@ -1,0 +1,51 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using OpenCvSharp;
+
+namespace ConsoleApp2
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            // include opencvsharp3
+
+            Mat mat = Cv2.ImRead("test.bmp", ImreadModes.Grayscale);
+
+            double lineDetectThre;
+            double waveWidthThre = (double)3 / 8;
+
+            byte[] matArr = new byte[mat.Total()];
+            mat.GetArray(0, 0, matArr);
+            lineDetectThre = matArr.Select(b => (int)b).ToArray().Average() * 10;
+            //lineDetectThre = matArr.Select(b => (int)b).ToArray().OrderByDescending(i => i).Skip(mat.Cols * 10).FirstOrDefault();
+
+            Mat maxInRows = new Mat();
+            Cv2.Reduce(mat, maxInRows, ReduceDimension.Row, ReduceTypes.Max, -1);
+            Mat binaryForRow = maxInRows.Threshold(lineDetectThre, 1, ThresholdTypes.Binary);
+            
+            byte[] byteArray = new byte[binaryForRow.Total()];
+            binaryForRow.GetArray(0, 0, byteArray);
+            int[] intArray = byteArray.Select(b => (int)b).ToArray();
+
+            int left = Array.IndexOf(intArray, intArray.FirstOrDefault(i => i != 0));
+            int right = Array.LastIndexOf(intArray, intArray.FirstOrDefault(i => i != 0));
+            int center = mat.Cols / 2;
+
+            var ranges = new[] { new Range(left, Math.Min(left + 300, center - 151)), new Range(center - 150, center + 150), new Range(Math.Max(center + 151, right - 300), right) };
+
+            int sum = ranges.Sum(range => intArray.Skip(range.Start).Take(range.End - range.Start + 1).Sum());
+
+            Mat maxValues = new Mat();
+            Cv2.Reduce(mat, maxValues, ReduceDimension.Row, ReduceTypes.Max, -1);
+            maxValues *= waveWidthThre;
+            Mat expandedMaxValues = maxValues.Repeat(mat.Rows, 1);
+            Mat comparison = mat.GreaterThan(expandedMaxValues);
+
+            int count = ranges.Sum(range => comparison.ColRange(range).CountNonZero());
+
+            double width = (double)count / sum;
+        }
+    }
+}
