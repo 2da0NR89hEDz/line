@@ -1,0 +1,35 @@
+            Mat image = Cv2.ImRead("test.bmp", ImreadModes.Color);
+            Mat hsv = image.CvtColor(ColorConversionCodes.BGR2HSV);
+            Mat blue = new Mat();
+            Cv2.InRange(hsv, new Scalar(100, 100, 100), new Scalar(140, 255, 255), blue);
+            //Mat mono = blue.CvtColor(ColorConversionCodes.BGR2GRAY);
+
+            byte[] matArr = new byte[blue.Total()];
+            blue.GetArray(0, 0, matArr);
+            int lineDetectThre = (int)(matArr.Select(b => (int)b).ToArray().Average() * 10);
+            Mat expandedThre = new Mat(blue.Size(), blue.Type(), new Scalar(lineDetectThre));
+            Mat comparison = blue.GreaterThan(expandedThre);
+            comparison.ImWrite("debug.bmp");
+            Mat ret = new Mat();
+            Cv2.FindNonZero(comparison, ret);
+
+            Point[] points = new Point[ret.Rows];
+            for (int i = 0; i < ret.Rows; i++)
+            {
+                points[i] = new Point((int)ret.At<float>(i, 0), (int)ret.At<float>(i, 1));
+            }
+
+            Line2D line = Cv2.FitLine(points, DistanceTypes.L2, 0, 0.01, 0.01);
+
+            //// 近似直線のパラメータを取得します。
+            //double vx = line.Item0;
+            //double vy = line.Item1;
+            //double x = line.Item2;
+            //double y = line.Item3;
+
+            //// 近似直線の始点と終点を計算します。
+            //int lefty = (int)((-x * vy / vx) + y);
+            //int righty = (int)(((bluePixels.Cols - x) * vy / vx) + y);
+
+            //// 近似直線を返します。
+            //return new LineSegmentPoint(new Point(0, lefty), new Point(bluePixels.Cols - 1, righty));
