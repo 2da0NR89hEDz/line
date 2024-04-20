@@ -1,0 +1,70 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using OpenCvSharp;
+
+namespace ConsoleApp3
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            var ret = GetLaserPosition();
+        }
+
+        static double GetLaserPosition()
+        {
+            // input guide line
+            Mat img = Cv2.ImRead("guide.bmp", ImreadModes.Color);
+            Mat hsv = img.CvtColor(ColorConversionCodes.BGR2HSV);
+            Mat mono = new Mat();
+            Cv2.InRange(hsv, new Scalar(0, 100, 100), new Scalar(10, 255, 255), mono);
+
+            Mat bin = new Mat();
+            Cv2.Threshold(mono, bin, 0, 255, ThresholdTypes.Otsu);
+            LineSegmentPoint[] lines = Cv2.HoughLinesP(bin, 1, Math.PI / 180, 50, 50, 10);
+            var firstLine = lines.OrderByDescending(l => l.Length(l)).First();
+            var secondLine = lines.OrderByDescending(l => l.Length(l)).ElementAt(2);
+            var leftLine = firstLine.P1.X < secondLine.P1.X ? firstLine : secondLine;
+            var rightLine = firstLine != leftLine ? firstLine : secondLine;
+
+            // input laser line
+            img = Cv2.ImRead("test.bmp", ImreadModes.Color);
+            hsv = img.CvtColor(ColorConversionCodes.BGR2HSV);
+            mono = new Mat();
+            Cv2.InRange(hsv, new Scalar(100, 100, 100), new Scalar(140, 255, 255), mono);
+            Cv2.Threshold(mono, bin, 0, 255, ThresholdTypes.Otsu);
+            lines = Cv2.HoughLinesP(bin, 1, Math.PI / 180, 50, 50, 10);
+            var laserLine = lines.OrderByDescending(l => l.Length(l)).First();
+
+            // calc laser position
+            int y = (laserLine.P1.Y + laserLine.P2.Y) / 2;
+            double left = GetIntersectionX(leftLine, y);
+            double right = GetIntersectionX(rightLine, y);
+            double laser = GetIntersectionX(laserLine, y);
+
+            double pos = (laser - (left + right) / 2) / (right - left) * 10;//
+
+            // output result
+            var res = mono.CvtColor(ColorConversionCodes.GRAY2BGR);
+            res.Line(leftLine.P1, leftLine.P2, Scalar.Red, 2);
+            res.Line(rightLine.P1, rightLine.P2, Scalar.Red, 2);
+            res.Line(laserLine.P1, laserLine.P2, Scalar.Blue, 2);
+            res.Line(new Point(left, y), new Point(right, y), Scalar.Lime, 2);
+            res.SaveImage("debug.bmp");
+
+            return pos;
+        }
+
+        static double GetIntersectionX(LineSegmentPoint line, int y)
+        {
+            double slope = (double)(line.P2.Y - line.P1.Y) / (line.P2.X - line.P1.X);
+            double intercept = line.P1.Y - slope * line.P1.X;
+            double x = (y - intercept) / slope;
+            return x;
+        }
+    }
+
+}
